@@ -1,18 +1,24 @@
 import psutil
 from functools import wraps
+import json
 
 file = open('result', 'w')
 
-def decorator0(func):
-    @wraps(func)
-    def inner():
-        res = func()
-        with open('result', 'a+') as file:
-            file.write(str(res) + '\n')
-        return res
-    return inner
+def param_dec(par):
+    def decorator0(func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            res = func(*args, **kwargs)
+            with open('result', 'a+') as file:
+                file.write(str(res) + '\n')
+            with open(par , 'a+' ) as file:
+                json.dump (res, file)
+        
+            return res
+        return inner
+    return decorator0
 
-@decorator0
+@param_dec('getcpu.json')
 def get_cpu():
     load_bars = []
     cppc = psutil.cpu_percent(interval=1, percpu=True)
@@ -21,19 +27,20 @@ def get_cpu():
         load_bars.append(f"CORE{core}: {usage}% {load_bar}")
     return load_bars
 
-@decorator0
+@param_dec('getdisk.json')
 def get_disk():
     du = psutil.disk_usage('/')
     dp = du.percent
     dps = f'disk usage={dp}%'
     return [dps]
 
-@decorator0
+@param_dec('getmem.json')
 def get_mem():
     memory = psutil.virtual_memory()
     mp = memory.percent
     mps = f'memory usage={mp}%'
     return [mps]
+
 
 def tb1():
     cpuinf = get_cpu()
@@ -45,7 +52,7 @@ def tb1():
     for i in range(len(cpuinf)):
         print(f'{cpuinf[i]:<30}      {diskinf[0]:<20}   {meminf[0]:<20}')
 
-@decorator0
+@param_dec('getproc.json')
 def get_processes():
     running_processes = []
     for proc in psutil.process_iter(['pid', 'name', 'username', 'memory_percent']):
@@ -60,6 +67,7 @@ def get_processes():
             pass
     return running_processes
 
+
 def tasks_table():
     processes = get_processes()
     print("{:<8} {:<25} {:<15} {:<15}".format('PID', 'Name', 'User', 'Memory Usage (%)'))
@@ -67,6 +75,10 @@ def tasks_table():
     for process in processes:
         print("{:<8} {:<25} {:<15} {:<15.2f}".format(
             process['PID'], process['Name'], process['User'], process['Memory Usage (%)']))
+    return 
+
+
+
 
 def main():
     tb1()
